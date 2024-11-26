@@ -19,8 +19,7 @@
  * GNU General Public License for more details.
  */
 
-#ifndef _STDLCD_DRAW_FUNCTIONS_H_
-#define _STDLCD_DRAW_FUNCTIONS_H_
+#pragma once
 
 #include "lcd.h"
 void lcdDrawMultiProtocolString(coord_t x, coord_t y, uint8_t moduleIdx, uint8_t protocol, LcdFlags flags = 0);
@@ -44,6 +43,8 @@ void drawFlightMode(coord_t x, coord_t y, int8_t idx, LcdFlags att = 0);
 void drawStartupAnimation(uint32_t duration, uint32_t totalDuration);
 void drawShutdownAnimation(uint32_t duration, uint32_t totalDuration, const char * message);
 void drawSleepBitmap();
+void drawFatalErrorScreen(const char * message);
+void runFatalErrorScreen(const char * message);
 
 void lcdDrawMMM(coord_t x, coord_t y, LcdFlags flags=0);
 void drawTrimMode(coord_t x, coord_t y, uint8_t flightMode, uint8_t idx, LcdFlags att=0);
@@ -53,4 +54,4 @@ void drawFunction(FnFuncP fn, uint8_t offset = 0);
 void drawCursor(FnFuncP fn, uint8_t offset = 0);
 void drawCurve(coord_t offset = 0);
 
-#endif // _STDLCD_DRAW_FUNCTIONS_H_
+void drawSource(coord_t x, coord_t y, mixsrc_t idx, LcdFlags att=0);

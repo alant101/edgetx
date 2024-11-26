@@ -1,7 +1,8 @@
 /*
- * Copyright (C) OpenTX
+ * Copyright (C) EdgeTX
  *
  * Based on code named
+ *   opentx - https://github.com/opentx/opentx
  *   th9x - http://code.google.com/p/th9x
  *   er9x - http://code.google.com/p/er9x
  *   gruvin9x - http://code.google.com/p/gruvin9x
@@ -22,8 +23,16 @@
 #include "customisation_data.h"
 #include "appdata.h"
 
+#include <yaml-cpp/yaml.h>
+
 #include <QImage>
 #include <QFile>
+#include <QString>
+#include <QStringList>
+
+#include <string>
+#include <sstream>
+
 
 //  used to screen out raw data that cannot be displayed in a user meaningful format at this time TODO remove
 #define SHOW_RAW_INFO  (1==0)
@@ -31,40 +40,105 @@
 UserInterfacePanel::UserInterfacePanel(QWidget * parent, ModelData & model, GeneralSettings & generalSettings, Firmware * firmware):
   ModelPanel(parent, model, generalSettings, firmware)
 {
-  RadioTheme::ThemeData & td = generalSettings.themeData;
+  Board::Type board = firmware->getBoard();
+
+  QString sdPath = QString(g.profile[g.id()].sdPath()).trimmed();
 
   grid = new QGridLayout(this);
 
   int col = 0;
   int row = 0;
 
-  addGridBlankRow(grid, row);
-  addGridLabel(grid, tr("Theme"), row, col++);
-  addGridLabel(grid, td.themeName, row++, col++);
+  std::string themeName = tr("Information unavailable").toStdString();
+  std::string themeAuthor = "";
+  std::string themeInfo = "";
+  std::string themeFolder = "";
 
-  col = 0;
-  addGridBlankRow(grid, row);
-  addGridLabel(grid, tr("Background"), row, col++);
+  QString selTheme = QString();
 
-  QLabel * img = new QLabel(this);
-  img->setText(tr("background image"));
-  QString path = QString(g.profile[g.id()].sdPath()).trimmed();
-  if (!path.isEmpty()) {
-    path.append(QString("/THEMES/%1/background.png").arg(td.themeName));
-    QFile f(path);
-    if (f.exists()) {
-      QImage image(path);
-      if (!image.isNull()) {
-        img->setText("");
-        img->setFixedSize(QSize(firmware->getCapability(LcdWidth) / 2, firmware->getCapability(LcdHeight) / 2));
-        img->setPixmap(QPixmap::fromImage(image.scaled(firmware->getCapability(LcdWidth) / 2, firmware->getCapability(LcdHeight) / 2)));
+  QFile f(sdPath % "/THEMES/selectedtheme.txt");
+
+  if (f.exists()) {
+    if (f.open(QFile::ReadOnly | QFile::Text)) {
+      QTextStream in(&f);
+      if (in.status() == QTextStream::Ok) {
+        selTheme = in.readLine();
+        if (!(in.status() == QTextStream::Ok)) {
+          selTheme = QString();
+        }
       }
+      f.close();
     }
   }
 
-  grid->addWidget(img, row++, col++);
+  if (!selTheme.isEmpty()) {
+    QStringList strl = selTheme.split("/");
+    if (strl.size() >= 3) {
+      themeFolder = "/THEMES/" + strl.at(2).toStdString();
+      themeName = strl.at(2).toStdString();
+    }
+
+    QString selThemeDetails(sdPath % selTheme);
+
+    if (QFile(selThemeDetails).exists()) {
+
+      try {
+        YAML::Node node = YAML::LoadFile(selThemeDetails.toStdString());
+
+        if (node["summary"]) {
+          const auto &summary = node["summary"];
+          if (summary.IsMap()) {
+            if (summary["name"].IsScalar())
+              themeName = summary["name"].as<std::string>();
+            if (summary["author"].IsScalar())
+              themeAuthor = summary["author"].as<std::string>();
+            if (summary["info"].IsScalar())
+              themeInfo = summary["info"].as<std::string>();
+          }
+        }
+      } catch(const std::runtime_error& e) {
+          QMessageBox::warning(this, CPN_STR_APP_NAME, tr("Cannot load %1").arg(selThemeDetails) + ":\n" + QString(e.what()));
+      }
+
+    }
+  }
+
+  addGridBlankRow(grid, row);
 
   col = 0;
+  addGridLabel(grid, tr("Theme"), row, col++);
+  addGridLabel(grid, themeName.c_str(), row++, col++);
+
+  col = 0;
+  addGridLabel(grid, tr("Author"), row, col++);
+  addGridLabel(grid, themeAuthor.c_str(), row++, col++);
+
+  col = 0;
+  addGridLabel(grid, tr("Information"), row, col++);
+  addGridLabel(grid, themeInfo.c_str(), row++, col++);
+
+  col = 0;
+  addGridBlankRow(grid, row);
+  addGridLabel(grid, "", row, col++);
+
+  QLabel * img = new QLabel(this);
+  QString path = sdPath + themeFolder.c_str() + "/logo.png";
+  QFile fimg(path);
+  if (fimg.exists()) {
+    QImage image(path);
+    if (!image.isNull()) {
+      img->setText("");
+      img->setFixedSize(QSize(Boards::getCapability(board, Board::LcdWidth) / 2,
+                              Boards::getCapability(board, Board::LcdHeight) / 2));
+      img->setPixmap(QPixmap::fromImage(image.scaled(Boards::getCapability(board, Board::LcdWidth) / 2,
+                                                     Boards::getCapability(board, Board::LcdHeight) / 2)));
+    }
+
+    grid->addWidget(img, row++, col++);
+  }
+
+  col = 0;
+  addGridBlankRow(grid, row);
   addGridLabel(grid, tr("Top Bar"), row, col++);
 
   int widgetdetailsrow = row;
@@ -120,11 +194,6 @@ UserInterfacePanel::UserInterfacePanel(QWidget * parent, ModelData & model, Gene
 
   col  = 0;
 
-  if (SHOW_RAW_INFO) {
-    addGridLabel(grid, tr("Theme"), row, col++);
-    grid->addLayout(addOptionsLayout<RadioTheme::PersistentData>(td.themePersistentData, MAX_THEME_OPTIONS), row, col);
-  }
-
   //  the grid must be fully built for the rowspan to work as required
   foreach (QWidget * wgt, optswidgets) {
     grid->addWidget(wgt, widgetdetailsrow, widgetdetailscol, 3, Qt::AlignTop);
@@ -158,6 +227,7 @@ UserInterfacePanel::~UserInterfacePanel()
 CustomScreenPanel::CustomScreenPanel(QWidget * parent, ModelData & model, int index, GeneralSettings & generalSettings, Firmware * firmware):
   ModelPanel(parent, model, generalSettings, firmware)
 {
+  Board::Type board = firmware->getBoard();
   RadioLayout::CustomScreens & scrns = model.customScreens;
 
   grid = new QGridLayout(this);
@@ -180,11 +250,14 @@ CustomScreenPanel::CustomScreenPanel(QWidget * parent, ModelData & model, int in
 
   QString path(QString(":/layouts/mask_%1.png").arg(QString(scrns.customScreenData[index].layoutId).toLower()));
   QFile f(path);
+
   if (f.exists()) {
     QImage image(path);
     if (!image.isNull()) {
-      img->setFixedSize(QSize(firmware->getCapability(LcdWidth) / 5, firmware->getCapability(LcdHeight) / 5));
-      img->setPixmap(QPixmap::fromImage(image.scaled(firmware->getCapability(LcdWidth) / 5, firmware->getCapability(LcdHeight) / 5)));
+      img->setFixedSize(QSize(Boards::getCapability(board, Board::LcdWidth) / 5,
+                              Boards::getCapability(board, Board::LcdHeight) / 5));
+      img->setPixmap(QPixmap::fromImage(image.scaled(Boards::getCapability(board, Board::LcdWidth) / 5,
+                                                     Boards::getCapability(board, Board::LcdHeight) / 5)));
     }
   }
 
@@ -260,7 +333,7 @@ CustomScreenPanel::CustomScreenPanel(QWidget * parent, ModelData & model, int in
         str = tr("Top bar");
         break;
       case LAYOUT_OPTION_FM:
-        str = tr("Flight mode");
+        str = tr("%1 mode").arg(Boards::getRadioTypeString(firmware->getBoard()));
         break;
       case LAYOUT_OPTION_SLIDERS:
         str = tr("Sliders");

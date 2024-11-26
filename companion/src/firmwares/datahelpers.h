@@ -1,7 +1,8 @@
 /*
- * Copyright (C) OpenTX
+ * Copyright (C) EdgeTX
  *
  * Based on code named
+ *   opentx - https://github.com/opentx/opentx
  *   th9x - http://code.google.com/p/th9x
  *   er9x - http://code.google.com/p/er9x
  *   gruvin9x - http://code.google.com/p/gruvin9x
@@ -21,6 +22,51 @@
 #pragma once
 
 #include <QtCore>
+#include <string>
+#include <vector>
+
+struct StringTagMapping {
+  std::string name;
+  std::string tag;
+
+  StringTagMapping() = default;
+  StringTagMapping(const char* name) :
+      name(name), tag(name)
+  {
+  }
+  StringTagMapping(const std::string& name) :
+      name(name), tag(name)
+  {
+  }
+  StringTagMapping(const char* name, const char* tag) :
+      name(name), tag(tag)
+  {
+  }
+  StringTagMapping(const std::string& name, const std::string& tag) :
+      name(name), tag(tag)
+  {
+  }
+};
+
+typedef std::vector<StringTagMapping> StringTagMappingTable;
+
+#define STRINGTAGMAPPINGFUNCS_HELPER(tbl, name)                   \
+    inline int name##Index (const char * tag)                     \
+    {                                                             \
+      return DataHelpers::getStringTagMappingIndex(tbl, tag);     \
+    }                                                             \
+                                                                  \
+    inline std::string name##Tag (unsigned int index)             \
+    {                                                             \
+      return DataHelpers::getStringTagMappingTag(tbl, index);     \
+    }                                                             \
+                                                                  \
+    inline std::string name##Name (const char * tag)              \
+    {                                                             \
+      return DataHelpers::getStringTagMappingName(tbl, tag);      \
+    }
+
+#define STRINGTAGMAPPINGFUNCS(tbl, name)  STRINGTAGMAPPINGFUNCS_HELPER(tbl, get##name)
 
 class FieldRange
 {
@@ -65,5 +111,9 @@ namespace DataHelpers
   QString boolToString(const bool value, const BoolFormat format);
   QString getElementName(const QString & prefix, const unsigned int index, const char * name = 0, const bool padding = false);
   QString timeToString(const int value, const unsigned int mask);
-
+  int getStringTagMappingIndex(const StringTagMappingTable& lut, const char * tag);
+  std::string getStringTagMappingTag(const StringTagMappingTable& lut, unsigned int index);
+  std::string getStringNameMappingTag(const StringTagMappingTable& lut, const char * name);
+  std::string getStringTagMappingName(const StringTagMappingTable& lut, const char * tag);
+  QString getCompositeName(const QString defaultName, const QString customName, const bool prefixCustom);
 }

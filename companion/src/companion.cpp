@@ -1,7 +1,8 @@
 /*
- * Copyright (C) OpenTX
+ * Copyright (C) EdgeTX
  *
  * Based on code named
+ *   opentx - https://github.com/opentx/opentx
  *   th9x - http://code.google.com/p/th9x
  *   er9x - http://code.google.com/p/er9x
  *   gruvin9x - http://code.google.com/p/gruvin9x
@@ -29,7 +30,8 @@
   #undef main
 #endif
 
-#include "appdebugmessagehandler.h"
+#include <AppDebugMessageHandler>
+
 #include "customdebug.h"
 #include "mainwindow.h"
 #include "version.h"
@@ -38,6 +40,7 @@
 #include "storage.h"
 #include "translations.h"
 #include "helpers.h"
+#include "boardfactories.h"
 
 #ifdef __APPLE__
 #include <QProxyStyle>
@@ -69,28 +72,22 @@ void checkSettingsImport(bool force = false)
   if (!found && !force)
     return;
 
-  const QString impFileBtn = QCoreApplication::translate("Companion", "Import from File");
-  const QString impPrevBtn = QCoreApplication::translate("Companion", "Import from v%1").arg(previousVersion);
-  const QString impNoneBtn = QCoreApplication::translate("Companion", "Do not import");
-
   QString msg;
   if (previousVersion.isEmpty()) {
+    const QString impFileBtn = QCoreApplication::translate("Companion", "Import from File");
+    const QString impNoneBtn = QCoreApplication::translate("Companion", "Do not import");
+
     if (found)
       msg = QCoreApplication::translate("Companion", "We have found possible Companion settings backup file(s).\nDo you want to import settings from a file?");
     else
       msg = QCoreApplication::translate("Companion", "Import settings from a file, or start with current values.");
+
+    const int ret = QMessageBox::question(nullptr, CPN_STR_APP_NAME, msg, impNoneBtn, impFileBtn, 0, 0);
+
+    if (!ret)
+      return;
   }
   else {
-    msg = QCoreApplication::translate("Companion", "We have found existing settings for Companion version: %1.\nDo you want to import them?\n\n" \
-                                                   "If you have a settings backup file, you may import that instead.").arg(previousVersion);
-  }
-
-  const int ret = QMessageBox::question(nullptr, CPN_STR_APP_NAME, msg, impNoneBtn, impFileBtn, (previousVersion.isEmpty() ? QString() : impPrevBtn), 0, 0);
-  if (!ret)
-    return;
-
-  // Import from previous version
-  if (ret == 2) {
     if (!g.importSettings(previousVersion)) {
       // very unlikely, but just in case of unexpected error, restart the import
       importError();
@@ -228,11 +225,16 @@ int main(int argc, char *argv[])
   #ifdef SIMU_AUDIO
     sdlFlags |= SDL_INIT_AUDIO;
   #endif
+  #if defined(_WIN32) || defined(_WIN64)
+    putenv("SDL_AUDIODRIVER=directsound");
+  #endif
   if (SDL_Init(sdlFlags) < 0) {
     fprintf(stderr, "ERROR: couldn't initialize SDL: %s\n", SDL_GetError());
   }
 #endif
 
+  Q_INIT_RESOURCE(hwdefs);
+  gBoardFactories = new BoardFactories();
   registerStorageFactories();
   registerOpenTxFirmwares();
   SimulatorLoader::registerSimulators();
@@ -243,32 +245,30 @@ int main(int argc, char *argv[])
     profile.fwName("");
   }
 
-  QString splashScreen;
-  splashScreen = ":/images/splash.png";
-
-  QPixmap pixmap = QPixmap(splashScreen);
-  QSplashScreen *splash = new QSplashScreen(pixmap);
-
   Firmware::setCurrentVariant(Firmware::getFirmwareForId(g.profile[g.id()].fwType()));
 
   MainWindow *mainWin = new MainWindow();
+  mainWin->show();
+
   if (g.showSplash()) {
-    splash->show();
-    QTimer::singleShot(1000*SPLASH_TIME, splash, SLOT(close()));
-    QTimer::singleShot(1000*SPLASH_TIME, mainWin, SLOT(show()));
-  }
-  else {
-    mainWin->show();
+    QSplashScreen *splash = new QSplashScreen(QPixmap(":/images/splash.png"));
+    QTimer::singleShot(1, [=] {
+      splash->show();
+    });
+    QTimer::singleShot(1000*SPLASH_TIME, [=] {
+      splash->close();
+      delete splash;
+    });
   }
 
   int result = app.exec();
 
-  delete splash;
   delete mainWin;
 
   SimulatorLoader::unregisterSimulators();
   unregisterOpenTxFirmwares();
   unregisterStorageFactories();
+  gBoardFactories->unregisterBoardFactories();
 
 #if defined(JOYSTICKS) || defined(SIMU_AUDIO)
   SDL_Quit();

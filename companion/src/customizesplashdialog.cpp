@@ -1,7 +1,8 @@
 /*
- * Copyright (C) OpenTX
+ * Copyright (C) EdgeTX
  *
  * Based on code named
+ *   opentx - https://github.com/opentx/opentx
  *   th9x - http://code.google.com/p/th9x
  *   er9x - http://code.google.com/p/er9x
  *   gruvin9x - http://code.google.com/p/gruvin9x
@@ -28,10 +29,14 @@
 
 //*** Side Class ***
 
-Side::Side(){
+Side::Side(QDialog* parent):
+  parent(parent)
+{
   imageLabel = 0;
   fileNameEdit = 0;
   saveButton = 0;
+  invertButton = 0;
+  libraryButton = 0;
   loadFwButton=0;
   loadPictButton = 0;
   loadProfileButton = 0;
@@ -50,7 +55,7 @@ void Side::markSourceButton()
 void Side::copyImage( Side side )
 {
   if ((*source!=UNDEFINED) && (*side.source!=UNDEFINED))
-    imageLabel->setPixmap(*side.imageLabel->pixmap());
+    imageLabel->setPixmap(side.imageLabel->pixmap(Qt::ReturnByValue));
 }
 
 bool Side::displayImage(QString fileName, Source pictSource)
@@ -62,7 +67,7 @@ bool Side::displayImage(QString fileName, Source pictSource)
 
   // Determine which picture format to use
   if (pictSource == FW) {
-    FirmwareInterface firmware(fileName);
+    FirmwareInterface firmware(fileName, parent);
     if (!firmware.hasSplash())
       return false;
     else
@@ -120,11 +125,11 @@ bool Side::saveImage()
 {
   if (*source == FW )
   {
-    FirmwareInterface firmware(*saveToFileName);
+    FirmwareInterface firmware(*saveToFileName, parent);
     if (!firmware.hasSplash()) {
       return false;
     }
-    QImage image = imageLabel->pixmap()->toImage().scaled(firmware.getSplashWidth(), firmware.getSplashHeight());
+    QImage image = imageLabel->pixmap(Qt::ReturnByValue).toImage().scaled(firmware.getSplashWidth(), firmware.getSplashHeight());
     if (firmware.setSplash(image) && (firmware.save(*saveToFileName) > 0)) {
       g.flashDir( QFileInfo(*saveToFileName).dir().absolutePath() );
     }
@@ -133,7 +138,7 @@ bool Side::saveImage()
     }
   }
   else if (*source == PICT) {
-    QImage image = imageLabel->pixmap()->toImage().scaled(imageLabel->width()/2, imageLabel->height()/2).convertToFormat(QImage::Format_Indexed8);
+    QImage image = imageLabel->pixmap(Qt::ReturnByValue).toImage().scaled(imageLabel->width()/2, imageLabel->height()/2).convertToFormat(QImage::Format_Indexed8);
     if (image.save(*saveToFileName)) {
       g.imagesDir( QFileInfo(*saveToFileName).dir().absolutePath() );
     }
@@ -142,7 +147,7 @@ bool Side::saveImage()
     }
   }
   else if (*source == PROFILE) {
-    QImage image = imageLabel->pixmap()->toImage().scaled(imageLabel->width()/2, imageLabel->height()/2).convertToFormat(QImage::Format_Indexed8);
+    QImage image = imageLabel->pixmap(Qt::ReturnByValue).toImage().scaled(imageLabel->width()/2, imageLabel->height()/2).convertToFormat(QImage::Format_Indexed8);
     if (!image.save(*saveToFileName)) {
       return false;
     }
@@ -152,6 +157,8 @@ bool Side::saveImage()
 
 CustomizeSplashDialog::CustomizeSplashDialog(QWidget *parent) :
   QDialog(parent),
+  left(this),
+  right(this),
   ui(new Ui::CustomizeSplashDialog)
 {
   ui->setupUi(this);
@@ -274,7 +281,7 @@ void CustomizeSplashDialog::on_leftInvertButton_clicked(){invertButton_clicked(l
 void CustomizeSplashDialog::on_rightInvertButton_clicked(){invertButton_clicked(right);}
 void CustomizeSplashDialog::invertButton_clicked(Side side)
 {
-  QImage image = side.imageLabel->pixmap()->toImage();
+  QImage image = side.imageLabel->pixmap(Qt::ReturnByValue).toImage();
   image.invertPixels();
   side.imageLabel->setPixmap(QPixmap::fromImage(image));
 }

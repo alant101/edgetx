@@ -1,7 +1,8 @@
 /*
- * Copyright (C) OpenTX
+ * Copyright (C) EdgeTX
  *
  * Based on code named
+ *   opentx - https://github.com/opentx/opentx
  *   th9x - http://code.google.com/p/th9x
  *   er9x - http://code.google.com/p/er9x
  *   gruvin9x - http://code.google.com/p/gruvin9x
@@ -75,6 +76,7 @@ class SyncProcess : public QObject
         int flags;               // SyncOptionFlags
         int dirFilterFlags;      // QDir::Filters
         int logLevel;            // QtMsgType (see ProgressWidget::addMessage())
+        int sessionId;           // Last run radio profile
 
         void reset()
         {
@@ -86,6 +88,7 @@ class SyncProcess : public QObject
           logLevel = QtWarningMsg;
           flags = OPT_RECURSIVE;
           dirFilterFlags = QDir::Dirs | QDir::Files | QDir::NoDotAndDotDot;
+          sessionId = -1;
         }
 
         friend inline QDebug operator<<(QDebug debug, const SyncOptions &o) {

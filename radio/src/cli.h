@@ -19,21 +19,12 @@
  * GNU General Public License for more details.
  */
 
-#ifndef _CLI_H_
-#define _CLI_H_
+#pragma once
 
-#include "serial.h"
+#include "hal/serial_driver.h"
 
-extern uint8_t cliTracesEnabled;
-
-#ifdef __cplusplus
-#include "fifo.h"
-extern Fifo<uint8_t, 256> cliRxFifo;
-#include "tasks.h"
-extern RTOS_TASK_HANDLE cliTaskId;
-extern RTOS_DEFINE_STACK(cliStack, CLI_STACK_SIZE);
-#endif
-
+// CLI task function
 void cliStart();
 
-#endif // _CLI_H_
+// Connect serial driver to CLI
+void cliSetSerialDriver(void* ctx, const etx_serial_driver_t* drv);

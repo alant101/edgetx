@@ -1,7 +1,8 @@
 /*
- * Copyright (C) OpenTX
+ * Copyright (C) EdgeTX
  *
  * Based on code named
+ *   opentx - https://github.com/opentx/opentx
  *   th9x - http://code.google.com/p/th9x
  *   er9x - http://code.google.com/p/er9x
  *   gruvin9x - http://code.google.com/p/gruvin9x
@@ -47,6 +48,9 @@ class GeneralEdit : public QDialog
     GeneralEdit(QWidget * parent, RadioData & radioData, Firmware * firmware);
     ~GeneralEdit();
 
+  protected:
+    virtual void closeEvent(QCloseEvent *event) override;
+
   private:
     Ui::GeneralEdit *ui;
     GeneralSettings & generalSettings;
@@ -60,6 +64,7 @@ class GeneralEdit : public QDialog
 
   signals:
     void modified();
+    void internalModuleChanged();
 
   private slots:
     void onTabModified();
@@ -71,6 +76,6 @@ class GeneralEdit : public QDialog
     Firmware * firmware;
     QVector<GenericPanel *> panels;
     void addTab(GenericPanel *panel, QString text);
-    void closeEvent(QCloseEvent *event);
     CompoundItemModelFactory *editorItemModels;
+    bool intModChanged = false;
 };

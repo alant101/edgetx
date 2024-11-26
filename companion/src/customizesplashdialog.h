@@ -1,7 +1,8 @@
 /*
- * Copyright (C) OpenTX
+ * Copyright (C) EdgeTX
  *
  * Based on code named
+ *   opentx - https://github.com/opentx/opentx
  *   th9x - http://code.google.com/p/th9x
  *   er9x - http://code.google.com/p/er9x
  *   gruvin9x - http://code.google.com/p/gruvin9x
@@ -40,7 +41,7 @@ enum LCDFormat {LCD9X, LCDTARANIS};
 class Side
 {
 public:
-  Side();
+  Side(QDialog* parent);
   void markSourceButton();
   void copyImage( Side );
   bool displayImage( QString fileName, Source source );
@@ -59,6 +60,7 @@ public:
   QString *saveToFileName;
 
 private:
+  QDialog* parent;
   Source *source;
   LCDFormat *format;
 };

@@ -1,7 +1,8 @@
 /*
- * Copyright (C) OpenTX
+ * Copyright (C) EdgeTX
  *
  * Based on code named
+ *   opentx - https://github.com/opentx/opentx
  *   th9x - http://code.google.com/p/th9x
  *   er9x - http://code.google.com/p/er9x
  *   gruvin9x - http://code.google.com/p/gruvin9x
@@ -18,17 +19,17 @@
  * GNU General Public License for more details.
  */
 
-#ifndef _MAINWINDOW_H_
-#define _MAINWINDOW_H_
+#pragma once
 
 #include <QtWidgets>
 #include <QDateTime>
-#include "downloaddialog.h"
 #include "eeprominterface.h"
 
 #define SPLASH_TIME 5
 
 class MdiChild;
+class UpdateFactories;
+
 QT_BEGIN_NAMESPACE
 class QAction;
 class QMenu;
@@ -47,17 +48,11 @@ class MainWindow : public QMainWindow
    ~MainWindow();
 
   signals:
-    void firmwareDownloadCompleted();
     void firmwareChanged();
     void startSync();
-
-  protected:
-    QString getCompanionUpdateBaseUrl() const;
-    QString seekCodeString(const QByteArray & qba, const QString & label) const;
+    void onInternalModuleChanged();
 
   protected slots:
-    void dowloadLastFirmwareUpdate();
-    void startFirmwareDownload();
     virtual void closeEvent(QCloseEvent *event);
     virtual void changeEvent(QEvent *e);
     virtual void dragEnterEvent(QDragEnterEvent *event);
@@ -82,17 +77,7 @@ class MainWindow : public QMainWindow
     void onSubwindowModified();
     void onCurrentProfileChanged();
 
-    void checkForUpdates();
-    void checkForFirmwareUpdate();
-
-    void checkForCompanionUpdateFinished(QNetworkReply * reply);
-    void checkForFirmwareUpdateFinished(QNetworkReply * reply);
-
     void displayWarnings();
-    void doAutoUpdates();
-    void doUpdates();
-    void updateDownloaded();
-    void firmwareDownloadAccepted();
     void newFile();
     void openFile();
     void save();
@@ -103,21 +88,20 @@ class MainWindow : public QMainWindow
     bool loadProfileId(const unsigned pid);
     void loadProfile();
     void logFile();
-    void writeEeprom();
-    void readEeprom();
+    void writeSettings();
+    void readSettings();
     void writeFlash(QString fileToFlash="");
     void readFlash();
     void writeBackup();
     void readBackup();
     void burnConfig();
     void burnList();
-    void sdsync();
+    void sdsync(bool postUpdate = false);
     void changelog();
     void customizeSplash();
     void about();
     void compare();
     void appPrefs();
-    void fwPrefs();
     void updateMenus();
     void createProfile();
     void copyProfile();
@@ -127,11 +111,12 @@ class MainWindow : public QMainWindow
     void importSettings();
     void autoClose();
     void chooseProfile();
+    void autoCheckForUpdates();
+    void manualCheckForUpdates();
+    void downloads();
+    void doUpdates(bool check, bool interactive = true);
 
-    void openUpdatesWaitDialog();
-    void closeUpdatesWaitDialog();
-    void onUpdatesError(const QString & err);
-    void openFile(const QString & fileName, bool updateLastUsedDir = false);
+    void openFile(const QString & fileName);
 
   private:
     QAction * addAct(const QString & icon, const char * slot = NULL, const QKeySequence & shortcut = 0, QObject * slotObj = NULL, const char * signal = NULL);
@@ -156,7 +141,7 @@ class MainWindow : public QMainWindow
     QMdiSubWindow * findMdiChild(const QString & fileName);
     bool anyChildrenDirty();
 
-    bool readEepromFromRadio(const QString & filename);
+    bool readSettingsFromRadio(const QString & filename);
     bool readFirmwareFromRadio(const QString & filename);
 
     bool checkProfileRadioExists(int profId);
@@ -164,11 +149,7 @@ class MainWindow : public QMainWindow
     QMdiArea *mdiArea;
 
     QString installer_fileName;
-    DownloadDialog * downloadDialog_forWait;
-    unsigned int checkForUpdatesState;
-    QString firmwareVersionString;
-
-    QNetworkAccessManager *networkManager;
+    UpdateFactories *updateFactories;
 
     QVector<QAction *> recentFileActs;
     QVector<QAction *> profileActs;
@@ -197,14 +178,14 @@ class MainWindow : public QMainWindow
     QAction *recentFilesAct;
     QAction *exitAct;
     QAction *appPrefsAct;
-    QAction *fwPrefsAct;
-    QAction *checkForUpdatesAct;
+    QAction *downloadsAct;
+    QAction *manualChkForUpdAct;
     QAction *sdsyncAct;
     QAction *changelogAct;
     QAction *compareAct;
     QAction *editSplashAct;
-    QAction *writeEepromAct;
-    QAction *readEepromAct;
+    QAction *writeSettingsAct;
+    QAction *readSettingsAct;
     QAction *burnConfigAct;
     QAction *burnListAct;
     QAction *writeFlashAct;
@@ -219,11 +200,9 @@ class MainWindow : public QMainWindow
     QAction *deleteProfileAct;
     QAction *exportSettingsAct;
     QAction *importSettingsAct;
-    QAction *openDocURLAct;
+    //QAction *openDocURLAct;
     QAction *actTabbedWindows;
     QAction *actTileWindows;
     QAction *actCascadeWindows;
     QAction *actCloseAllWindows;
 };
-
-#endif // _MAINWINDOW_H_

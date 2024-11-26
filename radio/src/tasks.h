@@ -19,24 +19,30 @@
  * GNU General Public License for more details.
  */
 
-#ifndef _TASKS_H_
-#define _TASKS_H_
+#pragma once
 
 #include "rtos.h"
 
 // stack sizes should be in multiples of 8 for better alignment
 #if defined (COLORLCD)
-  #define MENUS_STACK_SIZE     4000
+  #define MENUS_STACK_SIZE     (8 * 1024)
 #else
   #define MENUS_STACK_SIZE     2000
 #endif
+
+#if !defined(DEBUG)
 #define MIXER_STACK_SIZE       400
 #define AUDIO_STACK_SIZE       400
-#define CLI_STACK_SIZE         1000  // only consumed with CLI build option
+#else
+#define MIXER_STACK_SIZE       512
+#define AUDIO_STACK_SIZE       512
+#endif
+
+#define CLI_STACK_SIZE         1024  // only consumed with CLI build option
 
 #if defined(FREE_RTOS)
 #define MIXER_TASK_PRIO        (tskIDLE_PRIORITY + 4)
-#define AUDIO_TASK_PRIO        (tskIDLE_PRIORITY + 2)
+#define AUDIO_TASK_PRIO        (tskIDLE_PRIORITY + 3) // Note: FreeRTOSConfig.h defines software timers as priority 2
 #define MENUS_TASK_PRIO        (tskIDLE_PRIORITY + 1)
 #define CLI_TASK_PRIO          (tskIDLE_PRIORITY + 1)
 #else
@@ -46,18 +52,18 @@
 #define CLI_TASK_PRIO          (1)
 #endif
 
-extern RTOS_TASK_HANDLE menusTaskId;
-extern RTOS_DEFINE_STACK(menusStack, MENUS_STACK_SIZE);
 
-extern RTOS_TASK_HANDLE mixerTaskId;
-extern RTOS_DEFINE_STACK(mixerStack, MIXER_STACK_SIZE);
+extern TaskStack<MENUS_STACK_SIZE> menusStack;
+extern TaskStack<MIXER_STACK_SIZE> mixerStack;
 
-extern RTOS_TASK_HANDLE audioTaskId;
-extern RTOS_DEFINE_STACK(audioStack, AUDIO_STACK_SIZE);
+#if defined(AUDIO)
+extern TaskStack<AUDIO_STACK_SIZE> audioStack;
+#endif
 
-extern RTOS_MUTEX_HANDLE mixerMutex;
+#if defined(CLI)
+extern TaskStack<CLI_STACK_SIZE> cliStack;
+#endif
 
-void stackPaint();
 void tasksStart();
 
 extern volatile uint16_t timeForcePowerOffPressed;
@@ -65,5 +71,3 @@ inline void resetForcePowerOffRequest()
 {
   timeForcePowerOffPressed = 0;
 }
-
-#endif // _TASKS_H_

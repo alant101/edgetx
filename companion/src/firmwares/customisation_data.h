@@ -1,7 +1,8 @@
 /*
- * Copyright (C) OpenTX
+ * Copyright (C) EdgeTX
  *
  * Based on code named
+ *   opentx - https://github.com/opentx/opentx
  *   th9x - http://code.google.com/p/th9x
  *   er9x - http://code.google.com/p/er9x
  *   gruvin9x - http://code.google.com/p/gruvin9x
@@ -20,6 +21,7 @@
 
 #pragma once
 #include "constants.h"
+#include "rawsource.h"
 
 #include <QtCore>
 
@@ -29,17 +31,16 @@
 
 */
 
-constexpr int MAX_CUSTOM_SCREENS      {5};
-constexpr int THEME_NAME_LEN          {8};
+constexpr int MAX_CUSTOM_SCREENS      {10};
 constexpr int MAX_THEME_OPTIONS       {5};
 constexpr int LEN_ZONE_OPTION_STRING  {8};
 constexpr int MAX_LAYOUT_ZONES        {10};
 constexpr int MAX_LAYOUT_OPTIONS      {10};
-constexpr int WIDGET_NAME_LEN         {10};
+constexpr int WIDGET_NAME_LEN         {12};
 constexpr int MAX_WIDGET_OPTIONS      {5};
-constexpr int MAX_TOPBAR_ZONES        {4};
+constexpr int MAX_TOPBAR_ZONES        {6};  //  max 4 used for portrait
 constexpr int MAX_TOPBAR_OPTIONS      {1};
-constexpr int LAYOUT_ID_LEN           {10};
+constexpr int LAYOUT_ID_LEN           {12};
 
 // Common 'ZoneOptionValue's among all layouts
 enum {
@@ -58,6 +59,10 @@ struct ZoneOptionValue  // union in radio/src/datastructs.h
   int signedValue;
   unsigned int boolValue;
   char stringValue[LEN_ZONE_OPTION_STRING + 1];
+  RawSource sourceValue;
+  unsigned int colorValue;
+
+  ZoneOptionValue();
 };
 
 enum ZoneOptionValueEnum {
@@ -65,7 +70,17 @@ enum ZoneOptionValueEnum {
   ZOV_Signed,
   ZOV_Bool,
   ZOV_String,
-  ZOV_LAST = ZOV_String
+  ZOV_Source,
+  ZOV_Color,
+  ZOV_LAST = ZOV_Color
+};
+
+enum ZoneOptionAlign
+{
+  ALIGN_LEFT,
+  ALIGN_CENTER,
+  ALIGN_RIGHT,
+  ALIGN_COUNT
 };
 
 struct ZoneOption
@@ -75,11 +90,14 @@ struct ZoneOption
     Source,
     Bool,
     String,
-    File,
     TextSize,
     Timer,
     Switch,
-    Color
+    Color,
+    Align,
+    Slider,
+    Choice,
+    File,
   };
 
   const char * name;
@@ -93,21 +111,33 @@ struct ZoneOptionValueTyped
 {
   ZoneOptionValueEnum type;
   ZoneOptionValue     value;
+
+  ZoneOptionValueTyped();
+  bool isEmpty() const;
 };
 
 struct WidgetPersistentData {
   ZoneOptionValueTyped options[MAX_WIDGET_OPTIONS];
+
+  WidgetPersistentData();
 };
 
 struct ZonePersistentData {
   char widgetName[WIDGET_NAME_LEN + 1];
   WidgetPersistentData widgetData;
+
+  ZonePersistentData();
+  bool isEmpty() const;
 };
 
 template<int N, int O>
 struct WidgetsContainerPersistentData {
   ZonePersistentData   zones[N];
   ZoneOptionValueTyped options[O];
+
+  WidgetsContainerPersistentData() {
+    memset((void*)this, 0, sizeof(WidgetsContainerPersistentData));
+  }
 };
 
 typedef WidgetsContainerPersistentData<MAX_LAYOUT_ZONES, MAX_LAYOUT_OPTIONS>
@@ -115,23 +145,6 @@ typedef WidgetsContainerPersistentData<MAX_LAYOUT_ZONES, MAX_LAYOUT_OPTIONS>
 
 typedef WidgetsContainerPersistentData<MAX_TOPBAR_ZONES, MAX_TOPBAR_OPTIONS>
     TopBarPersistentData;
-
-class RadioTheme
-{
-  Q_DECLARE_TR_FUNCTIONS(RadioTheme)
-
-  public:
-    struct PersistentData {
-      ZoneOptionValueTyped options[MAX_THEME_OPTIONS];
-    };
-
-    struct ThemeData {
-      char themeName[THEME_NAME_LEN + 1];
-      PersistentData themePersistentData;
-    };
-
-    static void init(const char * themeName, ThemeData & themeData);
-};
 
 class RadioLayout
 {
@@ -141,10 +154,15 @@ class RadioLayout
     struct CustomScreenData {
       char layoutId[LAYOUT_ID_LEN + 1];
       LayoutPersistentData layoutPersistentData;
+
+      CustomScreenData();
+      bool isEmpty() const;
     };
 
     struct CustomScreens {
       CustomScreenData customScreenData[MAX_CUSTOM_SCREENS];
+
+      void clear();
     };
 
     static void init(const char * layoutId, CustomScreens & customScreens);

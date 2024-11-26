@@ -19,8 +19,7 @@
  * GNU General Public License for more details.
  */
 
-#ifndef _TOUCH_H_
-#define _TOUCH_H_
+#pragma once
 
 enum TouchEvent
 {
@@ -45,8 +44,7 @@ struct TouchState
   short tapCount;
 };
 
-constexpr uint8_t SLIDE_RANGE = 6;
 
-extern TouchState touchState;
+#define SLIDE_RANGE 6
 
-#endif // _TOUCH_H_
+extern struct TouchState touchState;

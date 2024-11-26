@@ -19,20 +19,30 @@
  * GNU General Public License for more details.
  */
 
+#include <cinttypes>
+
 #include <stdio.h>
 #include "yaml_bits.h"
 #include "yaml_parser.h"
 
-#define MASK_LOWER(bits) ((1 << (bits)) - 1)
+#include <limits.h>     /* CHAR_BIT */
+
+#define _IS_ALIGNED(addr) (((intptr_t)addr & 0x3) == 0)
+
+#define BIT_MASK(__TYPE__, __ONE_COUNT__) \
+    ((__TYPE__) (-((__ONE_COUNT__) != 0))) \
+    & (((__TYPE__) -1) >> ((sizeof(__TYPE__) * CHAR_BIT) - (__ONE_COUNT__)))
+
+#define MASK_LOWER(bits) BIT_MASK(uint32_t, bits)
 #define MASK_UPPER(bits) (0xFF << bits)
 
 void yaml_put_bits(uint8_t* dst, uint32_t i, uint32_t bit_ofs, uint32_t bits)
 {
-    i &= ((1UL << bits) - 1);
+    i &= MASK_LOWER(bits);
 
     if (bit_ofs) {
 
-        *dst &= MASK_LOWER(bit_ofs);
+        *dst &= ~((MASK_LOWER(bits) << bit_ofs) & 0xFF);
         *(dst++) |= (i << bit_ofs) & 0xFF;
 
         if (bits <= 8 - bit_ofs)
@@ -88,71 +98,139 @@ uint32_t yaml_get_bits(uint8_t* src, uint32_t bit_ofs, uint32_t bits)
     return i;
 }
 
+// if the start address is not aligned on a byte,
+// checking max 32 bits is supported.
 bool yaml_is_zero(uint8_t* data, uint32_t bitoffs, uint32_t bits)
 {
-    return !yaml_get_bits(data + (bitoffs>>3UL), bitoffs & 0x7, bits);
+  data += bitoffs >> 3;
+  bitoffs &= 0x7;
+
+  if (bitoffs) {
+    return !yaml_get_bits(data, bitoffs, bits);
+  }
+
+  if(_IS_ALIGNED(data)) {
+    while (bits >= 32) {
+      if (*(uint32_t*)data) return false;
+      data += 4;
+      bits -= 32;
+    }
+  }
+
+  while (bits >= 8) {
+    if (*data) return false;
+    data++;
+    bits -= 8;
+  }
+
+  if (bits) {
+    return !yaml_get_bits(data, 0, bits);
+  }
+
+  return true;
 }
 
-int32_t yaml_str2int(const char* val, uint8_t val_len)
+int32_t yaml_str2int_ref(const char*& val, uint8_t& val_len)
 {
     bool  neg = false;
     int i_val = 0;
-    
-    for(uint8_t i=0; i < val_len; i++) {
-        if (val[i] == '-')
-            neg = true;
-        else if (val[i] >= '0' && val[i] <= '9') {
-            i_val = i_val * 10 + (val[i] - '0');
-        }
+
+    while (val_len > 0) {
+      if (*val == '-') {
+        neg = true;
+      } else if (*val >= '0' && *val <= '9') {
+        i_val = i_val * 10 + (*val - '0');
+      } else {
+        break;
+      }
+      val++; val_len--;
     }
 
     return neg ? -i_val : i_val;
 }
 
-uint32_t yaml_str2uint(const char* val, uint8_t val_len)
+int32_t yaml_str2int(const char* val, uint8_t val_len)
+{
+    return yaml_str2int_ref(val, val_len);
+}
+
+uint32_t yaml_str2uint_ref(const char*& val, uint8_t& val_len)
 {
     uint32_t i_val = 0;
     
-    for(uint8_t i=0; i < val_len; i++) {
-        if (val[i] >= '0' && val[i] <= '9') {
-            i_val = i_val * 10 + (val[i] - '0');
+    while(val_len > 0) {
+        if (*val >= '0' && *val <= '9') {
+            i_val = i_val * 10 + (*val - '0');
+        } else {
+            break;
         }
+        val++; val_len--;
     }
 
     return i_val;
 }
 
-static char int2str_buffer[MAX_STR] = {0};
-static const char _int2str_lookup[] = { '0', '1', '2', '3', '4', '5', '6' , '7', '8', '9' };
+uint32_t yaml_str2uint(const char* val, uint8_t val_len)
+{
+    return yaml_str2uint_ref(val, val_len);
+}
+
+uint32_t yaml_hex2uint(const char* val, uint8_t val_len)
+{
+    uint32_t i_val = 0;
+    
+    while(val_len > 0) {
+        if (*val >= '0' && *val <= '9') {
+          i_val <<= 4;
+          i_val |= (*val - '0') & 0xF;
+        } else if (*val >= 'A' && *val <= 'F') {
+          i_val <<= 4;
+          i_val |= (*val - 'A' + 10) & 0xF;
+        } else if (*val >= 'a' && *val <= 'f') {
+          i_val <<= 4;
+          i_val |= (*val - 'a' + 10) & 0xF;
+        } else {
+            break;
+        }
+        val++; val_len--;
+    }
+
+    return i_val;
+}
+
+constexpr int INT2STR_LEN = 16;
+
+static char int2str_buffer[INT2STR_LEN] = {0};
 
 char* yaml_unsigned2str(uint32_t i)
 {
-    char* c = &(int2str_buffer[MAX_STR-2]);
-    do {
-        *(c--) = _int2str_lookup[i % 10];
-        i = i / 10;
-    } while((c > int2str_buffer) && i);
-
-    return (c + 1);
+  snprintf(int2str_buffer, INT2STR_LEN, "%" PRIu32, i);
+  return int2str_buffer;
 }
 
 char* yaml_signed2str(int32_t i)
 {
-    if (i < 0) {
-        char* c = yaml_unsigned2str(-i);
-        *(--c) = '-';
-        return c;
-    }
+  snprintf(int2str_buffer, INT2STR_LEN, "%" PRId32, i);
+  return int2str_buffer;
+}
 
-    return yaml_unsigned2str((uint32_t)i);
+char* yaml_unsigned2hex(uint32_t i)
+{
+  snprintf(int2str_buffer, INT2STR_LEN, "%08" PRIX32, i);
+  return int2str_buffer;
+}
+
+char* yaml_rgb2hex(uint32_t i)
+{
+  snprintf(int2str_buffer, INT2STR_LEN, "%06" PRIX32, i);
+  return int2str_buffer;
 }
 
 int32_t yaml_to_signed(uint32_t i, uint32_t bits)
 {
-    if (i & (1 << (bits-1))) {
+    if (bits < 32 && (i & (1 << (bits-1)))) {
         i |= 0xFFFFFFFF << bits;
     }
 
     return i;
 }
-

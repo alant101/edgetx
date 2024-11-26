@@ -19,7 +19,7 @@
  * GNU General Public License for more details.
  */
 
-#include "opentx.h"
+#include "edgetx.h"
 
 uint8_t * lcdLoadBitmap(uint8_t * bmp, const char * filename, uint16_t width, uint16_t height)
 {
@@ -204,6 +204,10 @@ bool loadModelBitmap(char * name, uint8_t * bitmap)
   }
 
   // In all error cases, we set the default logo
-  memcpy(bitmap, logo_taranis, MODEL_BITMAP_SIZE);
+  RleBitmap pic(logo_taranis, 0);
+  *bitmap++ = pic.getWidth();
+  *bitmap++ = pic.getRawRows();
+  for(int i=0; i < MODEL_BITMAP_SIZE-2; i++)
+    *bitmap++ = pic.getNext();
   return false;
 }

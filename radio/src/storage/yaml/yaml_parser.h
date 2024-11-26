@@ -19,12 +19,11 @@
  * GNU General Public License for more details.
  */
 
-#ifndef _yaml_parser_h_
-#define _yaml_parser_h_
+#pragma once
 
 #include <stdint.h>
 
-#define MAX_STR 40
+#define MAX_STR 256
 #define MAX_DEPTH 16 // 12 real + 4 virtual
 
 struct YamlParserCalls
@@ -33,7 +32,7 @@ struct YamlParserCalls
     bool (*to_child)     (void* ctx);
     bool (*to_next_elmt) (void* ctx);
     bool (*find_node)    (void* ctx, char* buf, uint8_t len);
-    void (*set_attr)     (void* ctx, char* buf, uint8_t len);
+    void (*set_attr)     (void* ctx, char* buf, uint16_t len);
 };
 
 class YamlParser
@@ -42,9 +41,11 @@ class YamlParser
         ps_Indent=0,
         ps_Dash,
         ps_Attr,
+        ps_AttrQuo,
         ps_AttrSP,
         ps_Sep,
         ps_Val,
+        ps_ValEsc,
         ps_ValQuo,
         ps_ValEsc1,
         ps_ValEsc2,
@@ -63,18 +64,20 @@ class YamlParser
 
     // parser state
     uint8_t state;
+    uint8_t saved_state;
 
     // scratch buffer w/ 16 bytes
     // used for attribute and values
     char    scratch_buf[MAX_STR];
-    uint8_t scratch_len;
+    uint16_t scratch_len;
 
     bool node_found;
+    bool eof;
 
     // tree iterator state
     const YamlParserCalls* calls;
     void*                  ctx;
-    
+
     // Reset parser state for next line
     void reset();
 
@@ -93,8 +96,8 @@ public:
     YamlParser();
 
     void init(const YamlParserCalls* parser_calls, void* parser_ctx);
-    
-    YamlResult parse(const char* buffer, unsigned int size);
-};
 
-#endif
+    YamlResult parse(const char* buffer, unsigned int size);
+
+    void set_eof() { eof = true; }
+};

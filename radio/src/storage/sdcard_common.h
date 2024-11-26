@@ -19,35 +19,51 @@
  * GNU General Public License for more details.
  */
 
-#ifndef _SDCARD_COMMON_H_
-#define _SDCARD_COMMON_H_
+#pragma once
 
 #include "ff.h"
+#include "translations.h"
 
-#define DEFAULT_CATEGORY "Models"
+#define MODEL_FILENAME_PREFIX    "model"
+#define MODEL_FILENAME_SUFFIX    ".yml"
+#define DEFAULT_MODEL_FILENAME   MODEL_FILENAME_PREFIX "1" MODEL_FILENAME_SUFFIX
+#define MODEL_FILENAME_PATTERN   MODEL_FILENAME_PREFIX MODEL_FILENAME_SUFFIX
 
-#if defined(SDCARD_RAW)
-#define DEFAULT_MODEL_FILENAME   "model1.bin"
-#define MODEL_FILENAME_PATTERN   "model.bin"
-#elif defined(SDCARD_YAML)
-#define DEFAULT_MODEL_FILENAME   "model1.yml"
-#define MODEL_FILENAME_PATTERN   "model.yml"
-#endif
+// writes a complete YAML file
+struct YamlNode;
+const char* writeFileYaml(const char* path, const YamlNode* root_node, uint8_t* data, uint16_t checksum);
 
-// opens radio.bin or model file
-const char * openFile(const char * fullpath, FIL * file, uint16_t * size, uint8_t * version);
-const char * writeFile(const char * fullpath, const uint8_t * data, uint16_t size);
+void getModelPath(char * path, const char * filename, const char* pathName = STR_MODELS_PATH);
 
-void getModelPath(char * path, const char * filename);
-
-const char * readModel(const char * filename, uint8_t * buffer, uint32_t size, uint8_t * version);
-const char * loadModel(const char * filename, bool alarms=true);
+const char * readModel(const char * filename, uint8_t * buffer, uint32_t size, const char* pathName = STR_MODELS_PATH);
+const char * loadModel(char * filename, bool alarms=true);
+const char * loadModelTemplate(const char* fileName, const char* filePath);
 const char * createModel();
 const char * writeModel();
+
+#if !defined(STORAGE_MODELSLIST)
+
+extern ModelHeader modelHeaders[MAX_MODELS];
+
+// index storage vs modelslist
+void selectModel(uint8_t idx);
+const char* loadModel(uint8_t idx, bool alarms=true);
+bool modelExists(uint8_t idx);
+bool copyModel(uint8_t dst, uint8_t src);
+void swapModels(uint8_t id1, uint8_t id2);
+int8_t deleteModel(uint8_t idx);
+const char* backupModel(uint8_t idx);
+const char * restoreModel(uint8_t idx, char *model_name);
+uint8_t findEmptyModel(uint8_t id, bool down);
+
+#endif
+
+bool storageReadRadioSettings(bool checks);
 
 const char * loadRadioSettings();
 const char * writeGeneralSettings();
 
 const char * loadRadioSettings(const char * path);
 const char * loadRadioSettings();
-#endif // _SDCARD_RAW_H_
+
+void checkModelIdUnique(uint8_t index, uint8_t module);

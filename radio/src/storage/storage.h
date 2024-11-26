@@ -19,16 +19,13 @@
  * GNU General Public License for more details.
  */
 
-#ifndef _STORAGE_H_
-#define _STORAGE_H_
+#pragma once
 
 #if defined(SIMU)
   #define WRITE_DELAY_10MS 100
 #elif defined(RTC_BACKUP_RAM)
   #define WRITE_DELAY_10MS 1500 /* 15s */
 #elif defined(PCBTARANIS)
-  #define WRITE_DELAY_10MS 500
-#elif defined(PCBSKY9X) && !defined(REV0)
   #define WRITE_DELAY_10MS 500
 #else
   #define WRITE_DELAY_10MS 200
@@ -61,18 +58,18 @@ void storageFlushCurrentModel();
 void postRadioSettingsLoad();
 void preModelLoad();
 void postModelLoad(bool alarms);
-void checkExternalAntenna();
 
-#if defined(EEPROM)
-#include "eeprom_common.h"
+#if !defined(STORAGE_MODELSLIST)
+extern ModelHeader modelHeaders[MAX_MODELS];
+
+void loadModelHeader(uint8_t id, ModelHeader *header);
+void loadModelHeaders();
+
+uint8_t findNextUnusedModelId(uint8_t index, uint8_t module);
 #endif
 
-#if defined(SDCARD_RAW) || defined(SDCARD_YAML)
 #include "sdcard_common.h"
-#endif
 
 #if defined(RTC_BACKUP_RAM)
 #include "rtc_backup.h"
 #endif
-
-#endif // _STORAGE_H_

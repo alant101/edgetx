@@ -104,7 +104,7 @@
 
 Section "EdgeTX Companion @VERSION_FAMILY@" SecDummy
 
-  Delete "$INSTDIR\opentx-*-simulator.dll"
+  Delete "$INSTDIR\edgetx-*-simulator.dll"
   RMDir /r "$INSTDIR\lang"
   RMDir /r "$INSTDIR\phonon_backend"
 
@@ -116,8 +116,8 @@ Section "EdgeTX Companion @VERSION_FAMILY@" SecDummy
   ;Store installation folder
   WriteRegStr HKCU "Software\EdgeTX\Companion @VERSION_FAMILY@" "" $INSTDIR
 
-  ;Associate with extentions .otx
-  ${registerExtension} "$INSTDIR\companion.exe" ".otx" "EdgeTX Settings File"
+  ;Associate with extentions .etx
+  ${registerExtension} "$INSTDIR\companion.exe" ".etx" "EdgeTX Settings File"
 
   ;Create uninstaller
   WriteUninstaller "$INSTDIR\Uninstall.exe"
@@ -128,7 +128,7 @@ Section "EdgeTX Companion @VERSION_FAMILY@" SecDummy
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\EdgeTX Companion @VERSION_FAMILY@" "UninstallString" "$\"$INSTDIR\Uninstall.exe$\""
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\EdgeTX Companion @VERSION_FAMILY@" "DisplayIcon" "$\"$INSTDIR\companion.exe$\""
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\EdgeTX Companion @VERSION_FAMILY@" "Publisher" "EdgeTX"
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\EdgeTX Companion @VERSION_FAMILY@" "URLInfoAbout" "https://www.open-tx.org"
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\EdgeTX Companion @VERSION_FAMILY@" "URLInfoAbout" "https://www.edgetx.org"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\EdgeTX Companion @VERSION_FAMILY@" "QuietUninstallString" "$\"$INSTDIR\Uninstall.exe$\" /S"
 
   !insertmacro MUI_STARTMENU_WRITE_BEGIN Application
@@ -177,8 +177,8 @@ Section "un.EdgeTX Companion @VERSION_FAMILY@"
   Delete "$INSTDIR\license.txt"
   Delete "$INSTDIR\companion.exe"
   Delete "$INSTDIR\simulator.exe"
-  Delete "$INSTDIR\*opentx-*-simulator.dll"
-  Delete "$INSTDIR\SDL.dll"
+  Delete "$INSTDIR\*edgetx-*-simulator.dll"
+  Delete "$INSTDIR\SDL2.dll"
   ; MSVC-specific libs
   Delete "$INSTDIR\msvcp140.dll"
   Delete "$INSTDIR\vcruntime140.dll"
@@ -195,8 +195,10 @@ Section "un.EdgeTX Companion @VERSION_FAMILY@"
   Delete "$INSTDIR\libusb0.dll"
   Delete "$INSTDIR\libusb-1.0.dll"
   ; OpenSSL libs
-  Delete "$INSTDIR\libeay32.dll"
-  Delete "$INSTDIR\ssleay32.dll"
+  Delete "$INSTDIR\libssl-1_1.dll"
+  Delete "$INSTDIR\libssl-1_1-x64.dll"
+  Delete "$INSTDIR\libcrypto-1_1.dll"
+  Delete "$INSTDIR\libcrypto-1_1-x64.dll"
   ; MinGW libs
   Delete "$INSTDIR\libgcc_s_dw2-1.dll"
   Delete "$INSTDIR\libgcc_s_seh-1.dll"
@@ -218,10 +220,7 @@ Section "un.EdgeTX Companion @VERSION_FAMILY@"
 
   RMDir "$INSTDIR"
 
-  ${unregisterExtension} ".bin" "BIN File"
-  ${unregisterExtension} ".hex" "HEX File"
-  ${unregisterExtension} ".eepm" "EEPE File"
-  ${unregisterExtension} ".otx" "EdgeTX Settings File"
+  ${unregisterExtension} ".etx" "EdgeTX Settings File"
 
   !insertmacro MUI_STARTMENU_GETFOLDER Application $StartMenuFolder
 
@@ -275,7 +274,7 @@ Function StartMenuLocationCreator
   ${NSD_CreateLabel} 0u 0u 100% 12u $(SML_MainLabel)
   Pop $R0
 
-  ${NSD_CreateRadioButton} 8u 20u 100% 12u $(SML_RadioCurrent) 
+  ${NSD_CreateRadioButton} 8u 20u 100% 12u $(SML_RadioCurrent)
   Pop $StartMenuLocationRadioCurrent
   ${NSD_AddStyle} $StartMenuLocationRadioCurrent ${WS_GROUP}
 
@@ -284,7 +283,7 @@ Function StartMenuLocationCreator
 
   ${If} $StartMenuLocationValue == "all_users"
     ${NSD_SetState} $StartMenuLocationRadioAll ${BST_CHECKED}
-  ${Else}  
+  ${Else}
     ${NSD_SetState} $StartMenuLocationRadioCurrent ${BST_CHECKED}
   ${EndIf}
 

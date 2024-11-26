@@ -27,6 +27,26 @@
 #define WHITE RADIO_RGB(0xFF, 0xFF, 0xFF)
 #define RED RADIO_RGB(229, 32, 30)
 
+ZoneOptionValue::ZoneOptionValue()
+{
+  memset((void*)this, 0, sizeof(ZoneOptionValue));
+}
+
+ZoneOptionValueTyped::ZoneOptionValueTyped()
+{
+  memset((void*)this, 0, sizeof(ZoneOptionValueTyped));
+}
+
+WidgetPersistentData::WidgetPersistentData()
+{
+  memset((void*)this, 0, sizeof(WidgetPersistentData));
+}
+
+ZonePersistentData::ZonePersistentData()
+{
+  memset((void*)this, 0, sizeof(ZonePersistentData));
+}
+
 inline void setZoneOptionValue(ZoneOptionValue& zov, bool value)
 {
   zov.boolValue = value;
@@ -50,8 +70,8 @@ inline void setZoneOptionValue(ZoneOptionValue& zov, unsigned int value)
 inline ZoneOptionValueEnum zoneValueEnumFromType(ZoneOption::Type type)
 {
   switch(type) {
-  case ZoneOption::File:
   case ZoneOption::String:
+  case ZoneOption::File:
     return ZOV_String;
 
   case ZoneOption::Integer:
@@ -61,10 +81,11 @@ inline ZoneOptionValueEnum zoneValueEnumFromType(ZoneOption::Type type)
     return ZOV_Bool;
 
   case ZoneOption::Color:
-  case ZoneOption::Timer:
-  case ZoneOption::Switch:
+    return ZOV_Color;
+
   case ZoneOption::Source:
-  case ZoneOption::TextSize:
+    return ZOV_Source;
+
   default:
     return ZOV_Unsigned;
   }
@@ -85,26 +106,38 @@ inline const char * zoneOptionValueEnumToString(ZoneOptionValueEnum zovenum) {
   }
 }
 
-void RadioTheme::init(const char* themeName, ThemeData& themeData)
+static const ZoneOptionValueTyped zero_widget_option = {};
+
+bool ZoneOptionValueTyped::isEmpty() const
 {
-  memset(&themeData, 0, sizeof(ThemeData));
+  return !memcmp((void*)this, &zero_widget_option, sizeof(zero_widget_option));
+}
 
-  memcpy(&themeData.themeName, themeName, THEME_NAME_LEN);
+bool ZonePersistentData::isEmpty() const
+{
+  return strlen(widgetName) == 0;
+}
 
-  PersistentData& persistentData = themeData.themePersistentData;
+RadioLayout::CustomScreenData::CustomScreenData()
+{
+  memset((void*)this, 0, sizeof(RadioLayout::CustomScreenData));
+}
 
-  persistentData.options[0].type =
-      zoneValueEnumFromType(ZoneOption::Type::Color);
-  setZoneOptionValue(persistentData.options[0].value, (unsigned int)WHITE);
+bool RadioLayout::CustomScreenData::isEmpty() const
+{
+  return strlen(layoutId) == 0;
+}
 
-  persistentData.options[1].type =
-      zoneValueEnumFromType(ZoneOption::Type::Color);
-  setZoneOptionValue(persistentData.options[1].value, (unsigned int)RED);
+void RadioLayout::CustomScreens::clear()
+{
+  for (int i = 0; i < MAX_CUSTOM_SCREENS; i++) {
+    customScreenData[i] = CustomScreenData();
+  }
 }
 
 void RadioLayout::init(const char* layoutId, CustomScreens& customScreens)
 {
-  memset(&customScreens, 0, sizeof(CustomScreens));
+  customScreens.clear();
 
   for (int i = 0; i < MAX_CUSTOM_SCREENS; i++) {
     if (i == 0)

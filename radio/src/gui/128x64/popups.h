@@ -19,24 +19,23 @@
  * GNU General Public License for more details.
  */
 
-#ifndef _POPUPS_H_
-#define _POPUPS_H_
+#pragma once
 
 #include <keys.h>
 
-#define MESSAGEBOX_X                   10
-#define MESSAGEBOX_Y                   16
-#define MESSAGEBOX_W                   (LCD_W - 19)
+#define MESSAGEBOX_X                   8
+#define MESSAGEBOX_Y                   8
+#define MESSAGEBOX_W                   (LCD_W - 15)
 
 #define MENU_X                         MESSAGEBOX_X
 #define MENU_Y                         MESSAGEBOX_Y
 #define MENU_W                         MESSAGEBOX_W
 
-#define WARNING_LINE_LEN               20
-#define WARNING_LINE_X                 16
-#define WARNING_LINE_Y                 3*FH
+#define WARNING_LINE_LEN               24
+#define WARNING_LINE_X                 12
+#define WARNING_LINE_Y                 MESSAGEBOX_Y + 2
 
-#define POPUP_MENU_MAX_LINES         12
+#define POPUP_MENU_MAX_LINES         13
 #define MENU_MAX_DISPLAY_LINES       6
 #define MENU_LINE_LENGTH             (LEN_MODEL_NAME+12)
 
@@ -46,5 +45,3 @@ enum {
 };
 
 #include "../common/stdlcd/popups.h"
-
-#endif // _POPUPS_H_

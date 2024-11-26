@@ -19,7 +19,7 @@
  * GNU General Public License for more details.
  */
 
-#include "opentx.h"
+#include "edgetx.h"
 #include <math.h>
 
 #define RECEIVER_OPTIONS_2ND_COLUMN  (11*FW)
@@ -61,30 +61,7 @@ enum {
 
 bool isPowerAvailable(int value)
 {
-  uint8_t modelId = reusableBuffer.hardwareAndSettings.modules[g_moduleIdx].information.modelID;
-  uint8_t variant = reusableBuffer.hardwareAndSettings.modules[g_moduleIdx].information.variant;
-
-  if (modelId == PXX2_MODULE_R9M_LITE) {
-    if (variant == PXX2_VARIANT_EU)
-      return (value == 14 /* 25 mW with telemetry */ ||
-              value == 20 /* 100 mW without telemetry */);
-    else
-      return value == 20; /* 100 mW */
-  }
-  else if (modelId == PXX2_MODULE_R9M || modelId == PXX2_MODULE_R9M_LITE_PRO) {
-      if (variant == PXX2_VARIANT_EU)
-        return (value == 14 /* 25 mW */ ||
-                value == 23 /* 200 mW */ ||
-                value == 27 /* 500 mW */);
-      else
-        return (value == 10 /* 10 mW */ ||
-                value == 20 /* 100 mW */ ||
-                value == 27 /* 500 mW */ ||
-                value == 30 /* 1000 mW */);
-  }
-  else {
-    return (value <= 20); /* 100 mW max for XJTs */
-  }
+  return isPXX2PowerAvailable(reusableBuffer.hardwareAndSettings.modules[g_moduleIdx].information, value);
 }
 
 void menuModelModuleOptions(event_t event)
@@ -114,7 +91,7 @@ void menuModelModuleOptions(event_t event)
   }
 
   if (menuEvent) {
-    killEvents(KEY_EXIT);
+    killEvents(KEY_EXIT); // TODO: Check if needed
     moduleState[g_moduleIdx].mode = MODULE_MODE_NORMAL;
     if (reusableBuffer.hardwareAndSettings.moduleSettings.dirty) {
       abortPopMenu();

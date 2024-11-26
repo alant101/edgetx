@@ -1,7 +1,8 @@
 /*
- * Copyright (C) OpenTX
+ * Copyright (C) EdgeTX
  *
  * Based on code named
+ *   opentx - https://github.com/opentx/opentx
  *   th9x - http://code.google.com/p/th9x
  *   er9x - http://code.google.com/p/er9x
  *   gruvin9x - http://code.google.com/p/gruvin9x
@@ -66,5 +67,74 @@ QString DataHelpers::timeToString(const int value, const unsigned int mask)
   int minutes = val / 60;
   int seconds = val % 60;
   result.append(QString("%1:%2").arg(minutes, 2, 10, QLatin1Char('0')).arg(seconds, 2, 10, QLatin1Char('0')));
+  return result;
+}
+
+int DataHelpers::getStringTagMappingIndex(const StringTagMappingTable& lut, const char * tag)
+{
+  auto it =
+    find_if(lut.begin(), lut.end(), [=](const StringTagMapping& elmt) {
+      if (elmt.tag == tag) return true;
+      return false;
+    });
+
+  if (it != lut.end()) {
+    return it - lut.begin();
+  }
+
+  return -1;
+}
+
+std::string DataHelpers::getStringTagMappingTag(const StringTagMappingTable& lut, unsigned int index)
+{
+  if (index < lut.size())
+    return lut[index].tag;
+
+  return std::string();
+}
+
+std::string DataHelpers::getStringNameMappingTag(const StringTagMappingTable& lut, const char * name)
+{
+  auto it =
+    find_if(lut.begin(), lut.end(), [=](const StringTagMapping& elmt) {
+      if (elmt.name == name) return true;
+      return false;
+    });
+
+  if (it != lut.end()) {
+    return it->tag;
+  }
+
+  return std::string();
+}
+
+std::string DataHelpers::getStringTagMappingName(const StringTagMappingTable& lut, const char * tag)
+{
+  auto it =
+    find_if(lut.begin(), lut.end(), [=](const StringTagMapping& elmt) {
+      if (elmt.tag == tag) return true;
+      return false;
+    });
+
+  if (it != lut.end()) {
+    return it->name;
+  }
+
+  return std::string();
+}
+
+QString DataHelpers::getCompositeName(const QString defaultName, const QString customName, const bool prefixCustom)
+{
+  QString result;
+
+  if (customName.trimmed().isEmpty() || prefixCustom)
+    result = defaultName;
+
+  if (!customName.trimmed().isEmpty()) {
+    if (prefixCustom)
+      result.append(":");
+    result.append(customName.trimmed());
+  }
+
   return result;
 }
